@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>mGBA Player (iframe)</title>
+  <style>
+    body{margin:0;background:#071021;color:#e6eef6;font-family:Inter,system-ui, -apple-system, "Segoe UI", Roboto;}
+    #wrap{padding:12px}
+    #status{color:#9aa4b2;margin-bottom:8px}
+    #canvas{width:480px;height:320px;background:#000;display:block;border-radius:6px;image-rendering:pixelated}
+    .warning{color:#ffb3b3}
+  </style>
+</head>
+<body>
+  <div id="wrap">
+    <div id="status">mGBA iframe: waiting for ROM. Place your mGBA web build (mgba.js, mgba.wasm) in /mgba/</div>
+
+    <!-- A canvas target for the mGBA build to render into (if your build exposes a way to swap the framebuffer target) -->
+    <canvas id="canvas" width="240" height="160"></canvas>
+
+    <div style="margin-top:8px">
+      <small class="warning">This file is a helper/template. You must add the official mGBA web build files (mgba.js, mgba.wasm) into this folder for full functionality. See README for guidance.</small>
+    </div>
+
+    <div style="margin-top:12px">
+      <label style="display:inline-block;background:#0b1220;padding:6px 8px;border-radius:6px;cursor:pointer">
+        Or open a local ROM here
+        <input id="local-file" type="file" accept=".gba" style="display:none"/>
+      </label>
+    </div>
+  </div>
+
+  <!-- This file expects mgba.js to be present at the same directory (i.e., /mgba/mgba.js). -->
+  <!-- If you placed mgba.js somewhere else, update the path below. -->
+  <script>
+    // Basic message protocol:
+    // - receive { type: 'load-rom', filename, buffer: ArrayBuffer } from parent
+    // - attempt to write ROM to Emscripten FS and then invoke mGBA's entry/run function
+    //
+    // NOTE: mGBA Emscripten builds vary. You may need to adapt the call into the Module to match the build:
+    // - Use Module.FS_createDataFile to write the ROM bytes, then call the correct exported function (Module.ccall or Module._functionName).
+    // - If your mGBA build already provides a file-input UI and automatically loads files, you may instead host it standalone.
+    //
+    // This template does its best to:
+    // 1) load mgba.js if present
+    // 2) accept ROM via postMessage and write into FS as /roms/<filename>
+    // 3) optionally call an exported function (you will likely need to adapt the function name below)
+    //
+    // The small local-file input provides a fallback so you can test mGBA's UI directly.
+
+    const statusEl = document.getElementById('status');
+    const canvas = document.getElementById('canvas');
+    const localFile = document.getElementById('local-file');
+
+    function setStatus(t) {
+      statusEl.textContent = 'mGBA iframe: ' + t;
+    }
+
+    // Try to load mgba.js if available
+    (function loadMgbaScript() {
+      const script = document.createElement('script');
+      script.src = './mgba.js';
+      script.async = true;
+      script.onload = () => {
+        setStatus('mgba.js loaded. Waiting for ROM or user input.');
+        // If your build exposes Module or similar, you can interact with it here.
+      };
+      script.onerror = () => {
+        setStatus('mgba.js not found at /mgba/mgba.js. Place mGBA web build files in the mgba/ directory.');
+      };
+      document.head.appendChild(script);
+    })();
+
+    // Utility to write file to Emscripten FS (if available)
+    function writeRomToFS(filename, uint8array) {
+      if (typeof Module === 'undefined' || !Module.FS_createDataFile) {
+        throw new Error('Emscripten Module.FS_createDataFile is not available. Adapt mgba/player.html to your mGBA build.');
+      }
+      const path = '/roms';
+      try {
+        // create directory if not exists
+        try { Module.FS.mkdir(path); } catch (e) { /* ignore exists */ }
+      } catch (e) { /* ignore */ }
+      const full = path + '/' + filename;
+      // remove existing if exists
+      try { Module.FS.unlink(full); } catch (e) { /* ignore */ }
+      Module.FS_createDataFile(path, filename, uint8array, true, true);
+      return full;
+    }
+
+    // Attempt to call an exported function to run the ROM.
+    // This is a placeholder: you will likely need to adapt the name and arguments to match your compiled mGBA web build's exports.
+    function callMgbaRunFunction(romPath) {
+      // Example (very likely needs adaptation):
+      // If your build exposes Module.ccall and a function like 'run_from_path', call it:
+      if (typeof Module !== 'undefined' && typeof Module.ccall === 'function') {
+        try {
+          setStatus('Calling Module.ccall("run_from_path", ...) - adapt this name if needed.');
+          // The parameters here are placeholders; replace 'run_from_path' and args with what your build requires.
+          Module.ccall('run_from_path', 'number', ['string'], [romPath]);
+          return;
+        } catch (e) {
+          console.warn('ccall attempt failed', e);
+        }
+      }
+      // If the build exports a raw c symbol accessible via Module._functionName, call it:
+      if (typeof Module !== 'undefined' && typeof Module._run_from_path === 'function') {
+        try {
+          setStatus('Calling Module._run_from_path - adapt as needed.');
+          // This call signature is unknown; adapt when you know the exported function name/signature.
+          Module._run_from_path(romPath);
+          return;
+        } catch (e) {
+          console.warn('raw symbol attempt failed', e);
+        }
+      }
+      // No automatic start possible — instruct the user to use the mGBA UI or adapt this file.
+      setStatus('ROM written to FS at ' + romPath + '. Please adapt player.html to call your mGBA entry point or open mGBA UI to load from /roms/.');
+    }
+
+    // PostMessage handler: receive ROM from parent
+    window.addEventListener('message', async (evt) => {
+      const data = evt.data || {};
+      if (!data || data.type !== 'load-rom') return;
+      setStatus('Received ROM: ' + data.filename + ' — attempting to load...');
+      try {
+        let buffer = data.buffer;
+        // In some cases buffer may be an Uint8Array; normalize to Uint8Array
+        let uint8;
+        if (buffer instanceof ArrayBuffer) {
+          uint8 = new Uint8Array(buffer);
+        } else if (ArrayBuffer.isView(buffer)) {
+          uint8 = new Uint8Array(buffer.buffer);
+        } else {
+          setStatus('Received ROM buffer in unexpected format.');
+          return;
+        }
+
+        // Wait for Module and FS to be ready if possible
+        if (typeof Module !== 'undefined' && Module['calledRun'] === false) {
+          // Module is in-flight; wait for runtimeInitialized if present
+          await new Promise((resolve) => {
+            if (Module['onRuntimeInitialized']) {
+              const prev = Module['onRuntimeInitialized'];
+              Module['onRuntimeInitialized'] = function() {
+                try { prev(); } catch(e) {}
+                resolve();
+              };
+            } else {
+              // fallback: short wait
+              setTimeout(resolve, 500);
+            }
+          });
+        }
+
+        // write into FS
+        try {
+          const romPath = writeRomToFS(data.filename, uint8);
+          setStatus('ROM written to FS at ' + romPath);
+          // optionally try to call entry function
+          callMgbaRunFunction(romPath);
+          // send back a status message to parent
+          parent.postMessage({ type: 'status', text: 'ROM loaded into iframe: ' + data.filename }, '*');
+        } catch (err) {
+          console.error('Error writing ROM to FS or running:', err);
+          setStatus('Error: ' + (err && err.message ? err.message : String(err)));
+          parent.postMessage({ type: 'error', text: (err && err.message) ? err.message : String(err) }, '*');
+        }
+      } catch (e) {
+        console.error('Failed to process ROM message', e);
+        setStatus('Failed to process ROM message: ' + e.message);
+        parent.postMessage({ type: 'error', text: e.message }, '*');
+      }
+    });
+
+    // Local file fallback — lets user test from inside iframe as well.
+    localFile.addEventListener('change', (e) => {
+      const f = e.target.files && e.target.files[0];
+      if (!f) return;
+      const reader = new FileReader();
+      reader.onload = function(evt) {
+        const arr = new Uint8Array(evt.target.result);
+        try {
+          const path = writeRomToFS(f.name, arr);
+          setStatus('Wrote ROM to FS at ' + path + '. Adapt this page to auto-run if desired.');
+        } catch (err) {
+          setStatus('Could not write ROM to FS: ' + (err.message || err));
+        }
+      };
+      reader.readAsArrayBuffer(f);
+    });
+
+    // Inform parent we are ready
+    parent.postMessage({ type: 'status', text: 'mGBA iframe ready' }, '*');
+  </script>
+</body>
+</html>
