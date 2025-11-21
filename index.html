@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Netlify Game Host — Browser Emulator</title>
+  <link rel="stylesheet" href="styles.css" />
+  <!-- jsnes (NES emulator) from CDN -->
+  <script src="https://unpkg.com/jsnes/dist/jsnes.min.js"></script>
+</head>
+<body>
+  <header>
+    <h1>Netlify Game Host — Browser Emulator</h1>
+    <p class="muted">Upload and play ROMs in your browser (client-side only). Use only ROMs you legally own or that are public-domain/homebrew.</p>
+  </header>
+
+  <main>
+    <section id="controls">
+      <div class="left">
+        <label class="file-label">
+          Choose ROM
+          <input id="rom-file" type="file" accept=".nes,.zip,.bin,.rom,.gba" />
+        </label>
+
+        <label class="file-label" style="display:flex;align-items:center;">
+          Emulator:
+          <select id="emulator-select" style="margin-left:8px;background:transparent;border:0;color:var(--muted)">
+            <option value="nes">NES (jsnes)</option>
+            <option value="gba">GBA (mGBA WebAssembly)</option>
+          </select>
+        </label>
+
+        <button id="btn-play" disabled>Load & Play</button>
+        <button id="btn-reset" disabled>Reset</button>
+        <button id="btn-stop" disabled>Stop</button>
+      </div>
+      <div class="right">
+        <div id="status">Idle</div>
+      </div>
+    </section>
+
+    <section id="screen-area">
+      <div id="drop-zone">Drop ROM here</div>
+      <div id="render-area">
+        <!-- Canvas for NES -->
+        <canvas id="screen" width="256" height="240"></canvas>
+        <!-- iframe for mGBA (inserted dynamically when needed) -->
+        <div id="mgba-frame-container" style="display:none;">
+          <iframe id="mgba-frame" src="/mgba/player.html" style="width:540px;height:360px;border:0;border-radius:6px;background:#000;"></iframe>
+        </div>
+      </div>
+    </section>
+
+    <section id="info">
+      <h2>Controls</h2>
+      <p>
+        Keyboard (default):
+        <br/>Arrow keys = D-pad
+        <br/>Z = A, X = B, Enter = Start, Shift = Select
+      </p>
+
+      <h2>Important</h2>
+      <p class="warning">
+        This site only runs emulators in your browser and loads ROM files from your computer (or that you choose to drop). Do NOT upload or share copyrighted ROMs you do not own. Use only ROMs you legally own or public-domain/homebrew ROMs.
+      </p>
+    </section>
+  </main>
+
+  <footer>
+    <small>Designed for deployment to Netlify as a static site. No server-side storage, ROM files stay in your browser memory only.</small>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
