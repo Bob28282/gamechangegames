@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>GBA.js Player (iframe)</title>
+  <style>
+    body{margin:0;background:#071021;color:#e6eef6;font-family:Inter,system-ui, -apple-system, "Segoe UI", Roboto;}
+    #wrap{padding:12px}
+    #status{color:#9aa4b2;margin-bottom:8px}
+    #canvas{width:480px;height:320px;background:#000;display:block;border-radius:6px;image-rendering:pixelated}
+    .warning{color:#ffb3b3}
+  </style>
+</head>
+<body>
+  <div id="wrap">
+    <div id="status">GBA.js iframe: waiting for ROM. Place the GBA.js build (gbajs.js + assets) in /gbajs/</div>
+
+    <canvas id="canvas" width="240" height="160"></canvas>
+
+    <div style="margin-top:8px">
+      <small class="warning">This is a helper page. To use the original GBA.js, place the official build files into this folder (see README). The page will attempt to call common GBA.js APIs or fall back to writing ROM bytes into Module FS (if present).</small>
+    </div>
+
+    <div style="margin-top:12px">
+      <label style="display:inline-block;background:#0b1220;padding:6px 8px;border-radius:6px;cursor:pointer">
+        Or open a local ROM here
+        <input id="local-file" type="file" accept=".gba" style="display:none"/>
+      </label>
+    </div>
+  </div>
+
+  <!-- Try to load a local gbajs build if present at /gbajs/gbajs.js -->
+  <script>
+    const statusEl = document.getElementById('status');
+    const canvas = document.getElementById('canvas');
+    const localFile = document.getElementById('local-file');
+
+    function setStatus(t) {
+      statusEl.textContent = 'GBA.js iframe: ' + t;
+    }
+
+    (function loadGbajsScript() {
+      const script = document.createElement('script');
+      script.src = './gbajs.js';
+      script.async = true;
+      script.onload = () => setStatus('gbajs.js loaded (or placeholder). Waiting for ROM.');
+      script.onerror = () => setStatus('gbajs.js not found at /gbajs/gbajs.js. Place the archived build here.');
+      document.head.appendChild(script);
+    })();
+
+    // Write ROM to Emscripten FS if available (some builds use FS)
+    function writeRomToFS(filename, uint8array) {
+      if (typeof Module === 'undefined' || !Module.FS_createDataFile) {
+        throw new Error('Emscripten Module.FS_createDataFile is not available for GBA.js build.');
+      }
+      const path = '/roms';
+      try { Module.FS.mkdir(path); } catch (e) {}
+      const full = path + '/' + filename;
+      try { Module.FS.unlink(full); } catch (e) {}
+      Module.FS_createDataFile(path, filename, uint8array, true, true);
+      return full;
+    }
+
+    // Try to detect GBA.js runtime objects and call a "play" API with bytes or path
+    async function callGbajsPlay(romPath, romUint8) {
+      setStatus('Attempting to start via GBA.js runtime...');
+      await new Promise(r => setTimeout(r, 80));
+
+      const candidates = [];
+      if (window.GBA) candidates.push({ obj: window.GBA, where: 'window.GBA' });
+      if (window.gbajs) candidates.push({ obj: window.gbajs, where: 'window.gbajs' });
+      if (typeof Module !== 'undefined') {
+        if (Module.GBA) candidates.push({ obj: Module.GBA, where: 'Module.GBA' });
+        if (Module.gbajs) candidates.push({ obj: Module.gbajs, where: 'Module.gbajs' });
+      }
+      // Add Module as a general candidate
+      if (typeof Module !== 'undefined') candidates.push({ obj: Module, where: 'Module' });
+
+      function tryCall(obj, name) {
+        try {
+          const methods = ['play', 'playROM', 'load', 'loadROM', 'run', 'start', 'loadFromBytes'];
+          for (const m of methods) {
+            const fn = obj[m];
+            if (typeof fn === 'function') {
+              setStatus(`Calling ${name}.${m}(...)`);
+              try {
+                // prefer passing bytes if available
+                if (romUint8) {
+                  fn.call(obj, romUint8);
+                  parent.postMessage({ type: 'status', text: `GBA.js: invoked ${name}.${m} with bytes` }, '*');
+                  return true;
+                }
+                fn.call(obj, romPath);
+                parent.postMessage({ type: 'status', text: `GBA.js: invoked ${name}.${m} with path` }, '*');
+                return true;
+              } catch (e) { console.warn('Invocation failed', e); }
+            }
+          }
+        } catch (e) { console.warn('Error while probing', e); }
+        return false;
+      }
+
+      for (const c of candidates) {
+        if (!c.obj) continue;
+        if (tryCall(c.obj, c.where)) {
+          setStatus('Started using ' + c.where);
+          return true;
+        }
+      }
+
+      // fall back to Module.ccall / exported symbol attempts (common pattern)
+      if (typeof Module !== 'undefined' && typeof Module.ccall === 'function') {
+        try {
+          Module.ccall('run_from_path', 'number', ['string'], [romPath]);
+          parent.postMessage({ type: 'status', text: 'GBA.js: Module.ccall run_from_path invoked' }, '*');
+          return true;
+        } catch (e) {}
+      }
+      if (typeof Module !== 'undefined' && typeof Module._run_from_path === 'function') {
+        try {
+          Module._run_from_path(romPath);
+          parent.postMessage({ type: 'status', text: 'GBA.js: Module._run_from_path invoked' }, '*');
+          return true;
+        } catch (e) {}
+      }
+
+      setStatus('Could not auto-start GBA.js. ROM available at ' + (romPath || '(bytes)') + '. Adapt this player.html for your build.');
+      parent.postMessage({ type: 'error', text: 'Could not auto-start GBA.js; adapt player.html to your build.' }, '*');
+      return false;
+    }
+
+    // Message handler to receive ROM from parent
+    window.addEventListener('message', async (evt) => {
+      const data = evt.data || {};
+      if (!data || data.type !== 'load-rom') return;
+      setStatus('Received ROM: ' + data.filename + ' — preparing...');
+      try {
+        let buffer = data.buffer;
+        let uint8;
+        if (buffer instanceof ArrayBuffer) {
+          uint8 = new Uint8Array(buffer);
+        } else if (ArrayBuffer.isView(buffer)) {
+          uint8 = new Uint8Array(buffer.buffer, buffer.byteOffset, buffer.byteLength);
+        } else {
+          setStatus('Received ROM buffer in unexpected format.');
+          return;
+        }
+
+        if (typeof Module !== 'undefined' && Module['calledRun'] === false) {
+          await new Promise((resolve) => {
+            if (Module['onRuntimeInitialized']) {
+              const prev = Module['onRuntimeInitialized'];
+              Module['onRuntimeInitialized'] = function() {
+                try { prev(); } catch(e) {}
+                resolve();
+              };
+            } else {
+              setTimeout(resolve, 500);
+            }
+          });
+        }
+
+        let romPath = '/roms/' + data.filename;
+        try {
+          writeRomToFS(data.filename, uint8);
+          setStatus('Wrote ROM to FS at ' + romPath + ' — attempting to start...');
+        } catch (err) {
+          console.warn('writeRomToFS failed', err);
+          setStatus('Could not write ROM to FS; will attempt direct invocation with bytes.');
+          romPath = null;
+        }
+
+        await callGbajsPlay(romPath || data.filename, uint8);
+        parent.postMessage({ type: 'status', text: 'ROM loaded into iframe: ' + data.filename }, '*');
+      } catch (e) {
+        console.error('Failed to process ROM message', e);
+        setStatus('Failed: ' + (e.message || e));
+        parent.postMessage({ type: 'error', text: e.message || String(e) }, '*');
+      }
+    });
+
+    // Local file fallback
+    localFile.addEventListener('change', (e) => {
+      const f = e.target.files && e.target.files[0];
+      if (!f) return;
+      const reader = new FileReader();
+      reader.onload = function(evt) {
+        const arr = new Uint8Array(evt.target.result);
+        try {
+          const path = writeRomToFS(f.name, arr);
+          setStatus('Wrote ROM to FS at ' + path + '. Adapt this page to auto-run if desired.');
+        } catch (err) {
+          setStatus('Could not write ROM to FS: ' + (err.message || err));
+        }
+      };
+      reader.readAsArrayBuffer(f);
+    });
+
+    // Inform parent we are ready
+    parent.postMessage({ type: 'status', text: 'GBA.js iframe ready' }, '*');
+  </script>
+</body>
+</html>
