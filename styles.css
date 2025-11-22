@@ -1,0 +1,236 @@
+:root{
+  --bg-0: #071021;
+  --bg-1: #0b1220;
+  --card: #0f1724;
+  --accent: #4dd0e1;
+  --accent-2: #7ee3d8;
+  --muted: #9aa4b2;
+  --text: #e6eef6;
+  --danger: #ff8b8b;
+  --glass: rgba(255,255,255,0.02);
+  --radius: 10px;
+  --shadow: 0 8px 30px rgba(2,6,23,0.6);
+  --focus: 0 0 0 4px rgba(77,208,225,0.15);
+}
+
+/* Reset / base */
+*{box-sizing:border-box}
+html,body{height:100%;margin:0;font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial}
+body{
+  background: linear-gradient(180deg,var(--bg-0) 0%, #031021 100%);
+  color:var(--text);
+  padding:28px;
+  -webkit-font-smoothing:antialiased;
+  -moz-osx-font-smoothing:grayscale;
+  line-height:1.35;
+}
+
+/* Layout container */
+.site{
+  max-width:1100px;
+  margin:0 auto;
+}
+
+/* Header */
+header{
+  margin:0 auto 18px;
+}
+h1{margin:0 0 6px;font-size:20px;font-weight:700}
+.muted{color:var(--muted);margin:0;font-size:13px}
+
+/* Card-like main */
+main{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));border-radius:var(--radius);padding:16px;box-shadow:var(--shadow);}
+
+/* Controls */
+#controls{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;margin-bottom:12px;gap:12px}
+#controls .left{display:flex;gap:8px;align-items:center}
+.file-label{
+  background:var(--card);
+  padding:8px 12px;
+  border-radius:8px;
+  cursor:pointer;
+  color:var(--muted);
+  font-size:14px;
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  border:1px solid rgba(255,255,255,0.02);
+}
+.file-label input{display:none}
+select, button{
+  -webkit-appearance:none;
+  appearance:none;
+  border:0;
+  padding:8px 12px;
+  border-radius:8px;
+  font-weight:600;
+  cursor:pointer;
+}
+select{
+  background:transparent;
+  color:var(--muted);
+  border:1px solid rgba(255,255,255,0.02);
+  min-width:120px;
+}
+button{
+  background:linear-gradient(180deg,var(--accent) 0%, var(--accent-2) 100%);
+  color:#04202a;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.35);
+  transition:transform .06s ease, opacity .12s ease;
+}
+button:hover{transform:translateY(-1px)}
+button[disabled]{opacity:.45;cursor:default;background:linear-gradient(90deg,#2c3e45,#223036);color:var(--muted)}
+
+/* Status */
+#status{color:var(--muted);font-size:13px}
+
+/* Screen area */
+#screen-area{display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap}
+#drop-zone{
+  flex:1;
+  min-height:240px;
+  border:2px dashed rgba(255,255,255,0.04);
+  border-radius:10px;
+  padding:12px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  color:var(--muted);
+  background: linear-gradient(180deg, rgba(255,255,255,0.01), transparent);
+  transition:background .15s ease, border-color .12s ease;
+}
+#drop-zone.dragover{
+  background: linear-gradient(180deg, rgba(77,208,225,0.06), rgba(77,208,225,0.02));
+  border-color: rgba(77,208,225,0.28);
+  color:var(--accent-2);
+}
+
+/* Render area containing canvas and iframe */
+#render-area{display:flex;flex-direction:column;gap:12px;align-items:center}
+#screen{
+  width:512px;
+  height:480px;
+  background:#000;
+  border-radius:6px;
+  image-rendering:pixelated;
+  box-shadow:var(--shadow);
+  border:1px solid rgba(255,255,255,0.03);
+  display:block;
+  max-width:100%;
+}
+
+/* mGBA iframe container */
+#mgba-frame-container{
+  display:none;
+  width:540px;
+  max-width:100%;
+  border-radius:8px;
+  overflow:hidden;
+  box-shadow:var(--shadow);
+  border:1px solid rgba(255,255,255,0.02);
+  background:#000;
+}
+
+/* Responsive: stack on small widths */
+@media (max-width:900px){
+  #screen-area{flex-direction:column}
+  #render-area{width:100%}
+  #mgba-frame-container, #screen{width:100%;height:auto}
+}
+
+/* Info section */
+#info{margin-top:14px;color:var(--muted);font-size:14px}
+.warning{color:var(--danger);font-weight:600}
+
+/* Footer */
+footer{margin-top:18px;text-align:center;color:var(--muted);font-size:13px}
+
+/* Focus and accessibility */
+button:focus, .file-label:focus, select:focus, #local-file:focus{
+  outline: none;
+  box-shadow: var(--focus);
+}
+
+/* Tiny helpers */
+kbd{background:#0b1220;border-radius:6px;padding:3px 6px;border:1px solid rgba(255,255,255,0.02);font-weight:700;color:var(--accent);}
+
+/* Small debug panel (hidden by default, can be toggled for dev) */
+#dev-info{display:none;font-size:12px;color:var(--muted);margin-top:8px}
+
+/* Gamepad hint row */
+.controls-hint{display:flex;gap:8px;flex-wrap:wrap;align-items:center;color:var(--muted);font-size:13px;margin-top:6px}
+
+/* Make embedded iframe canvas visually aligned */
+#mgba-frame iframe, #mgba-frame { width:100%; height:100%; display:block; border:0; }
+
+/* Ensure images and iframes don't leak focus outlines */
+img, iframe { max-width:100%; }
+
+/* Scrollbar styling for large ROM lists (if you add a library later) */
+.rom-list { max-height:240px; overflow:auto; padding-right:8px; }
+.rom-list::-webkit-scrollbar { width:10px }
+.rom-list::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.03); border-radius:6px }
+
+/* Utility */
+.hidden{display:none}
+.center{display:flex;align-items:center;justify-content:center}
+
+/* ---------- Library grid styles (new) ---------- */
+#library{margin-top:20px}
+.library-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;gap:12px}
+.library-header h2{margin:0;font-size:16px}
+
+/* Empty state */
+.library-empty{padding:20px;border-radius:8px;background:linear-gradient(180deg, rgba(255,255,255,0.01), transparent);border:1px dashed rgba(255,255,255,0.02);}
+
+/* Grid */
+.rom-grid{
+  display:grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap:12px;
+  margin-top:8px;
+}
+
+/* Item */
+.rom-item{
+  position:relative;
+  background:linear-gradient(180deg, rgba(255,255,255,0.01), transparent);
+  border-radius:8px;
+  overflow:hidden;
+  border:1px solid rgba(255,255,255,0.02);
+  transition:transform .12s ease, box-shadow .12s ease;
+}
+.rom-item:hover{transform:translateY(-4px);box-shadow:0 10px 30px rgba(0,0,0,0.55)}
+.rom-item .thumb{width:100%;height:0;padding-bottom:66.66%;position:relative;background:#000}
+.rom-item .thumb img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
+
+/* Caption */
+.rom-item figcaption{padding:8px}
+.rom-title{display:block;font-size:13px}
+.rom-meta{color:var(--muted);font-size:12px;margin-top:4px}
+
+/* Overlay actions (pure CSS reveal on hover) */
+.rom-actions{
+  position:absolute;
+  right:8px;
+  top:8px;
+  display:flex;
+  gap:6px;
+  opacity:0;
+  transform:translateY(-6px);
+  transition:opacity .12s ease, transform .12s ease;
+}
+.rom-item:hover .rom-actions{opacity:1;transform:translateY(0)}
+.rom-actions button{
+  width:36px;height:36px;border-radius:8px;padding:0;border:0;background:rgba(2,6,23,0.6);color:var(--text);font-weight:700;
+  display:inline-flex;align-items:center;justify-content:center;cursor:pointer;
+  border:1px solid rgba(255,255,255,0.03)
+}
+.rom-actions button:hover{background:linear-gradient(180deg,var(--accent) 0%, var(--accent-2) 100%);color:#052022}
+
+/* Small remove control at bottom (optional) */
+.rom-remove{background:rgba(255,40,40,0.06);color:#ffb3b3;border:1px solid rgba(255,40,40,0.06)}
+.rom-remove:hover{background:var(--danger);color:#2b0b0b}
+
+/* Accessibility focus */
+.rom-item:focus-within{box-shadow:var(--focus);outline:none}
