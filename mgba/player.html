@@ -32,23 +32,7 @@
   </div>
 
   <!-- This file expects mgba.js to be present at the same directory (i.e., /mgba/mgba.js). -->
-  <!-- If you placed mgba.js somewhere else, update the path below. -->
   <script>
-    // Basic message protocol:
-    // - receive { type: 'load-rom', filename, buffer: ArrayBuffer } from parent
-    // - attempt to write ROM to Emscripten FS and then invoke mGBA's entry/run function
-    //
-    // NOTE: mGBA Emscripten builds vary. You may need to adapt the call into the Module to match the build:
-    // - Use Module.FS_createDataFile to write the ROM bytes, then call the correct exported function (Module.ccall or Module._functionName).
-    // - If your mGBA build already provides a file-input UI and automatically loads files, you may instead host it standalone.
-    //
-    // This template does its best to:
-    // 1) load mgba.js if present
-    // 2) accept ROM via postMessage and write into FS as /roms/<filename>
-    // 3) optionally call an exported function (you will likely need to adapt the function name below)
-    //
-    // The small local-file input provides a fallback so you can test mGBA's UI directly.
-
     const statusEl = document.getElementById('status');
     const canvas = document.getElementById('canvas');
     const localFile = document.getElementById('local-file');
@@ -57,14 +41,13 @@
       statusEl.textContent = 'mGBA iframe: ' + t;
     }
 
-    // Try to load mgba.js if available
+    // Load mgba.js if present (non-blocking)
     (function loadMgbaScript() {
       const script = document.createElement('script');
       script.src = './mgba.js';
       script.async = true;
       script.onload = () => {
         setStatus('mgba.js loaded. Waiting for ROM or user input.');
-        // If your build exposes Module or similar, you can interact with it here.
       };
       script.onerror = () => {
         setStatus('mgba.js not found at /mgba/mgba.js. Place mGBA web build files in the mgba/ directory.');
@@ -78,45 +61,138 @@
         throw new Error('Emscripten Module.FS_createDataFile is not available. Adapt mgba/player.html to your mGBA build.');
       }
       const path = '/roms';
-      try {
-        // create directory if not exists
-        try { Module.FS.mkdir(path); } catch (e) { /* ignore exists */ }
-      } catch (e) { /* ignore */ }
+      try { Module.FS.mkdir(path); } catch (e) { /* ignore exists */ }
       const full = path + '/' + filename;
-      // remove existing if exists
       try { Module.FS.unlink(full); } catch (e) { /* ignore */ }
       Module.FS_createDataFile(path, filename, uint8array, true, true);
       return full;
     }
 
-    // Attempt to call an exported function to run the ROM.
-    // This is a placeholder: you will likely need to adapt the name and arguments to match your compiled mGBA web build's exports.
-    function callMgbaRunFunction(romPath) {
-      // Example (very likely needs adaptation):
-      // If your build exposes Module.ccall and a function like 'run_from_path', call it:
+    // New: attempt to find a GbaContext (common in some web builds) and call its play function.
+    // This function tries multiple strategies:
+    // 1) If a GbaContext object exists (window.GbaContext or Module.GbaContext) and exposes a play/load method, call it.
+    // 2) If not, fall back to Module.ccall / Module._run_from_path as before.
+    // 3) If none available, instruct the user to use the UI or adapt this file.
+    async function callMgbaRunFunction(romPath, romUint8) {
+      setStatus('Attempting to start via GbaContext or Module...');
+      // Wait a short time for Module/GbaContext to initialize if it's in-flight
+      await new Promise(resolve => setTimeout(resolve, 80));
+
+      // Collection of candidate contexts to test
+      const candidates = [];
+
+      if (typeof window !== 'undefined') {
+        if (window.GbaContext) candidates.push({ ctx: window.GbaContext, where: 'window.GbaContext' });
+        if (window.mgba && window.mgba.GbaContext) candidates.push({ ctx: window.mgba.GbaContext, where: 'window.mgba.GbaContext' });
+      }
+      if (typeof Module !== 'undefined') {
+        if (Module.GbaContext) candidates.push({ ctx: Module.GbaContext, where: 'Module.GbaContext' });
+        if (Module.mgba && Module.mgba.GbaContext) candidates.push({ ctx: Module.mgba.GbaContext, where: 'Module.mgba.GbaContext' });
+      }
+
+      // Also include the Module itself as a candidate where APIs might be attached
+      if (typeof Module !== 'undefined') candidates.push({ ctx: Module, where: 'Module' });
+
+      // Helper to attempt calling a context
+      function tryCallContext(obj, name) {
+        try {
+          // If the context is a constructor/instance, normalize
+          const ctx = (typeof obj === 'function' && obj.prototype) ? obj : obj;
+          // Common APIs: play, playROM, loadROM, loadRom, run, start
+          const methods = ['play', 'playROM', 'playRom', 'loadROM', 'loadRom', 'run', 'start'];
+          for (const m of methods) {
+            const fn = ctx[m];
+            if (typeof fn === 'function') {
+              setStatus(`Calling ${name}.${m}(...)`);
+              // Try to call with romPath first, then with Uint8Array
+              try {
+                // prefer passing the actual bytes if function accepts ArrayBuffer/Uint8Array
+                if (fn.length >= 1) {
+                  // Some APIs expect a path (string), some expect bytes; try bytes first when available
+                  if (romUint8 && (m.toLowerCase().includes('rom') || m.toLowerCase().includes('play'))) {
+                    const maybe = fn.call(ctx, romUint8);
+                    parent.postMessage({ type: 'status', text: `mGBA: invoked ${name}.${m} with bytes` }, '*');
+                    return true;
+                  }
+                  // Fallback to path string
+                  fn.call(ctx, romPath);
+                  parent.postMessage({ type: 'status', text: `mGBA: invoked ${name}.${m} with path ${romPath}` }, '*');
+                  return true;
+                } else {
+                  // no-arg function (unlikely) just call it
+                  fn.call(ctx);
+                  parent.postMessage({ type: 'status', text: `mGBA: invoked ${name}.${m}` }, '*');
+                  return true;
+                }
+              } catch (err) {
+                console.warn(`Call to ${name}.${m} failed:`, err);
+                // continue trying other methods
+              }
+            }
+          }
+        } catch (e) {
+          console.warn('Error while probing context', name, e);
+        }
+        return false;
+      }
+
+      // Try candidates
+      for (const c of candidates) {
+        if (!c.ctx) continue;
+        if (tryCallContext(c.ctx, c.where)) {
+          setStatus(`Started using ${c.where}`);
+          return;
+        }
+      }
+
+      // If we reach here, try Emscripten ccall or raw symbol as fallback
       if (typeof Module !== 'undefined' && typeof Module.ccall === 'function') {
         try {
-          setStatus('Calling Module.ccall("run_from_path", ...) - adapt this name if needed.');
-          // The parameters here are placeholders; replace 'run_from_path' and args with what your build requires.
-          Module.ccall('run_from_path', 'number', ['string'], [romPath]);
-          return;
+          setStatus('Trying Module.ccall fallback (run_from_path/run_from_memory)');
+          // try run_from_path with the string path
+          try {
+            Module.ccall('run_from_path', 'number', ['string'], [romPath]);
+            parent.postMessage({ type: 'status', text: 'mGBA: Module.ccall run_from_path invoked' }, '*');
+            return;
+          } catch (e) { /* ignore */ }
+          // try a memory-based variant if the build expects pointer/size — we cannot reliably do that here
         } catch (e) {
-          console.warn('ccall attempt failed', e);
+          console.warn('Module.ccall fallback failed', e);
         }
       }
-      // If the build exports a raw c symbol accessible via Module._functionName, call it:
+
       if (typeof Module !== 'undefined' && typeof Module._run_from_path === 'function') {
         try {
-          setStatus('Calling Module._run_from_path - adapt as needed.');
-          // This call signature is unknown; adapt when you know the exported function name/signature.
+          setStatus('Trying Module._run_from_path fallback');
           Module._run_from_path(romPath);
+          parent.postMessage({ type: 'status', text: 'mGBA: Module._run_from_path invoked' }, '*');
           return;
         } catch (e) {
-          console.warn('raw symbol attempt failed', e);
+          console.warn('Module._run_from_path fallback failed', e);
         }
       }
-      // No automatic start possible — instruct the user to use the mGBA UI or adapt this file.
-      setStatus('ROM written to FS at ' + romPath + '. Please adapt player.html to call your mGBA entry point or open mGBA UI to load from /roms/.');
+
+      // Last-ditch: if bytes available, and Module provides a simple API to load bytes (e.g., Module.loadROMBytes)
+      const byteLoadCandidates = ['loadROMBytes', 'loadBytes', 'load_rom_bytes', 'load_rom'];
+      if (romUint8 && typeof Module !== 'undefined') {
+        for (const name of byteLoadCandidates) {
+          const fn = Module[name];
+          if (typeof fn === 'function') {
+            try {
+              setStatus(`Calling Module.${name} with ROM bytes`);
+              fn(romUint8);
+              parent.postMessage({ type: 'status', text: `mGBA: Module.${name} invoked` }, '*');
+              return;
+            } catch (e) {
+              console.warn(`Module.${name} failed`, e);
+            }
+          }
+        }
+      }
+
+      // Nothing worked
+      setStatus('Could not auto-start mGBA: adapt player.html to your build or use the mGBA UI to load /roms/' + (romPath.split('/').pop() || 'ROM'));
+      parent.postMessage({ type: 'error', text: 'Could not auto-start mGBA; adapt player.html to your build.' }, '*');
     }
 
     // PostMessage handler: receive ROM from parent
@@ -126,20 +202,19 @@
       setStatus('Received ROM: ' + data.filename + ' — attempting to load...');
       try {
         let buffer = data.buffer;
-        // In some cases buffer may be an Uint8Array; normalize to Uint8Array
         let uint8;
         if (buffer instanceof ArrayBuffer) {
           uint8 = new Uint8Array(buffer);
         } else if (ArrayBuffer.isView(buffer)) {
-          uint8 = new Uint8Array(buffer.buffer);
+          // e.g., Uint8Array
+          uint8 = new Uint8Array(buffer.buffer, buffer.byteOffset, buffer.byteLength);
         } else {
           setStatus('Received ROM buffer in unexpected format.');
           return;
         }
 
-        // Wait for Module and FS to be ready if possible
+        // Wait for Module runtime if present
         if (typeof Module !== 'undefined' && Module['calledRun'] === false) {
-          // Module is in-flight; wait for runtimeInitialized if present
           await new Promise((resolve) => {
             if (Module['onRuntimeInitialized']) {
               const prev = Module['onRuntimeInitialized'];
@@ -148,25 +223,28 @@
                 resolve();
               };
             } else {
-              // fallback: short wait
               setTimeout(resolve, 500);
             }
           });
         }
 
-        // write into FS
+        // write into FS if available and remember path
+        let romPath = '/roms/' + data.filename;
         try {
-          const romPath = writeRomToFS(data.filename, uint8);
-          setStatus('ROM written to FS at ' + romPath);
-          // optionally try to call entry function
-          callMgbaRunFunction(romPath);
-          // send back a status message to parent
-          parent.postMessage({ type: 'status', text: 'ROM loaded into iframe: ' + data.filename }, '*');
+          writeRomToFS(data.filename, uint8);
+          setStatus('ROM written to FS at ' + romPath + ' — trying to start emulator...');
         } catch (err) {
-          console.error('Error writing ROM to FS or running:', err);
-          setStatus('Error: ' + (err && err.message ? err.message : String(err)));
-          parent.postMessage({ type: 'error', text: (err && err.message) ? err.message : String(err) }, '*');
+          // writing to FS failed (Module.FS not available). We'll still try direct-context call with bytes.
+          console.warn('writeRomToFS failed', err);
+          setStatus('Could not write ROM to FS; will attempt direct invocation with bytes.');
+          romPath = null;
         }
+
+        // Try to start via context/run functions with preference for GbaContext.play(...)
+        await callMgbaRunFunction(romPath || data.filename, uint8);
+
+        // send back a status message to parent
+        parent.postMessage({ type: 'status', text: 'ROM loaded into iframe: ' + data.filename }, '*');
       } catch (e) {
         console.error('Failed to process ROM message', e);
         setStatus('Failed to process ROM message: ' + e.message);
