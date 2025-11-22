@@ -1,0 +1,23 @@
+# mgba.wasm (placeholder)
+#
+# NOTE: This is a placeholder text file placed at mgba/mgba.wasm to remind you to
+# replace it with the official mGBA WebAssembly binary (mgba.wasm).
+#
+# DO NOT expect this text file to be a working WASM binary. Browsers require a real
+# binary `mgba.wasm` to be present. Replace this file with the real file you obtain
+# from the mGBA web build (or a build you create with Emscripten).
+#
+# How to replace:
+# 1) Obtain the official or community mGBA web build artifacts (mgba.js and mgba.wasm).
+#    - If you build mGBA yourself with Emscripten, the build will generate mgba.js and mgba.wasm.
+#    - If you download a prebuilt web build, it should include these files.
+# 2) Put the real mgba.js and mgba.wasm files into the mgba/ directory in your project root.
+# 3) If mgba.wasm is large (>50 MB), use Git LFS:
+#    git lfs install
+#    git lfs track "mgba/*.wasm"
+#    git add .gitattributes mgba/mgba.wasm
+#    git commit -m "Add mGBA wasm via LFS"
+#
+# If you'd like, provide me the real mgba.js (or the top of it) and I will adapt
+# mgba/player.html to call the correct exported function names and make the iframe
+# auto-run ROMs you send via postMessage.
