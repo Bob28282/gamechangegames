@@ -9,67 +9,109 @@
   <script src="https://unpkg.com/jsnes/dist/jsnes.min.js"></script>
 </head>
 <body>
-  <header>
-    <h1>Netlify Game Host — Browser Emulator</h1>
-    <p class="muted">Upload and play ROMs in your browser (client-side only). Use only ROMs you legally own or that are public-domain/homebrew.</p>
-  </header>
+  <div class="site">
+    <header>
+      <h1>Netlify Game Host — Browser Emulator</h1>
+      <p class="muted">Upload and play ROMs in your browser (client-side only). Use only ROMs you legally own or that are public-domain/homebrew.</p>
+    </header>
 
-  <main>
-    <section id="controls">
-      <div class="left">
-        <label class="file-label">
-          Choose ROM
-          <input id="rom-file" type="file" accept=".nes,.zip,.bin,.rom,.gba" />
-        </label>
+    <main>
+      <section id="controls">
+        <div class="left">
+          <label class="file-label">
+            Choose ROM
+            <input id="rom-file" type="file" accept=".nes,.zip,.bin,.rom,.gba" />
+          </label>
 
-        <label class="file-label" style="display:flex;align-items:center;">
-          Emulator:
-          <select id="emulator-select" style="margin-left:8px;background:transparent;border:0;color:var(--muted)">
-            <option value="nes">NES (jsnes)</option>
-            <option value="gba">GBA (mGBA WebAssembly)</option>
-          </select>
-        </label>
+          <label class="file-label" style="display:flex;align-items:center;">
+            Emulator:
+            <select id="emulator-select" style="margin-left:8px;background:transparent;border:0;color:var(--muted)">
+              <option value="nes">NES (jsnes)</option>
+              <option value="gba">GBA (mGBA WebAssembly)</option>
+            </select>
+          </label>
 
-        <button id="btn-play" disabled>Load & Play</button>
-        <button id="btn-reset" disabled>Reset</button>
-        <button id="btn-stop" disabled>Stop</button>
-      </div>
-      <div class="right">
-        <div id="status">Idle</div>
-      </div>
-    </section>
-
-    <section id="screen-area">
-      <div id="drop-zone">Drop ROM here</div>
-      <div id="render-area">
-        <!-- Canvas for NES -->
-        <canvas id="screen" width="256" height="240"></canvas>
-        <!-- iframe for mGBA (inserted dynamically when needed) -->
-        <div id="mgba-frame-container" style="display:none;">
-          <iframe id="mgba-frame" src="/mgba/player.html" style="width:540px;height:360px;border:0;border-radius:6px;background:#000;"></iframe>
+          <button id="btn-play" disabled>Load & Play</button>
+          <button id="btn-reset" disabled>Reset</button>
+          <button id="btn-stop" disabled>Stop</button>
         </div>
-      </div>
-    </section>
+        <div class="right">
+          <div id="status">Idle</div>
+        </div>
+      </section>
 
-    <section id="info">
-      <h2>Controls</h2>
-      <p>
-        Keyboard (default):
-        <br/>Arrow keys = D-pad
-        <br/>Z = A, X = B, Enter = Start, Shift = Select
-      </p>
+      <section id="screen-area">
+        <div id="drop-zone">Drop ROM here</div>
+        <div id="render-area">
+          <!-- Canvas for NES -->
+          <canvas id="screen" width="256" height="240"></canvas>
+          <!-- iframe for mGBA (inserted dynamically when needed) -->
+          <div id="mgba-frame-container" style="display:none;">
+            <iframe id="mgba-frame" src="/mgba/player.html" style="width:540px;height:360px;border:0;border-radius:6px;background:#000;"></iframe>
+          </div>
+        </div>
+      </section>
 
-      <h2>Important</h2>
-      <p class="warning">
-        This site only runs emulators in your browser and loads ROM files from your computer (or that you choose to drop). Do NOT upload or share copyrighted ROMs you do not own. Use only ROMs you legally own or public-domain/homebrew ROMs.
-      </p>
-    </section>
-  </main>
+      <section id="info">
+        <h2>Controls</h2>
+        <p>
+          Keyboard (default):
+          <br/>Arrow keys = D-pad
+          <br/>Z = A, X = B, Enter = Start, Shift = Select
+        </p>
 
-  <footer>
-    <small>Designed for deployment to Netlify as a static site. No server-side storage, ROM files stay in your browser memory only.</small>
-  </footer>
+        <h2>Important</h2>
+        <p class="warning">
+          This site only runs emulators in your browser and loads ROM files from your computer (or that you choose to drop). Do NOT upload or share copyrighted ROMs you do not own. Use only ROMs you legally own or public-domain/homebrew ROMs.
+        </p>
+      </section>
+
+      <!-- New: Game Library -->
+      <section id="library" aria-labelledby="library-title">
+        <div class="library-header">
+          <h2 id="library-title">Game Library</h2>
+          <div class="controls-hint">
+            <span class="muted">Your uploaded ROMs will appear here. Click a thumbnail to load/play.</span>
+          </div>
+        </div>
+
+        <!-- Empty state (visible when no ROMs) -->
+        <div id="library-empty" class="library-empty center">
+          <div>
+            <p class="muted">No games in your library yet.</p>
+            <p class="muted">Load a ROM or drag-and-drop one to add it here.</p>
+          </div>
+        </div>
+
+        <!-- Grid of thumbnails (pure CSS layout) -->
+        <div class="rom-grid" aria-live="polite">
+          <!-- Example static entries (you can remove or replace with dynamic entries) -->
+          <figure class="rom-item" data-filename="example1.gba">
+            <div class="thumb">
+              <img src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='480' height='320'><rect width='100%' height='100%' fill='%23000'/><text x='50%' y='50%' fill='%237ee3d8' font-family='Arial' font-size='20' text-anchor='middle' dominant-baseline='middle'>Example ROM</text></svg>" alt="Example ROM thumbnail">
+            </div>
+            <figcaption>
+              <strong class="rom-title">Example ROM</strong>
+              <div class="rom-meta">gba • demo</div>
+            </figcaption>
+            <div class="rom-actions">
+              <button class="rom-play" title="Play">▶</button>
+              <button class="rom-remove" title="Remove">✕</button>
+            </div>
+          </figure>
+
+          <!-- You can add more static placeholders here if desired -->
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <small>Designed for deployment to Netlify as a static site. No server-side storage, ROM files stay in your browser memory only.</small>
+    </footer>
+  </div>
 
   <script src="app.js"></script>
+  <!-- Optional helper to add library items programmatically. See library.js comments. -->
+  <script src="library.js" defer></script>
 </body>
 </html>
