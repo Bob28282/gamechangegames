@@ -27,7 +27,8 @@
             Emulator:
             <select id="emulator-select" style="margin-left:8px;background:transparent;border:0;color:var(--muted)">
               <option value="nes">NES (jsnes)</option>
-              <option value="gba">GBA (mGBA WebAssembly)</option>
+              <option value="mGBA">GBA (mGBA WebAssembly - host yourself)</option>
+              <option value="gbajs">GBA.js (endrift / archived)</option>
             </select>
           </label>
 
@@ -45,10 +46,25 @@
         <div id="render-area">
           <!-- Canvas for NES -->
           <canvas id="screen" width="256" height="240"></canvas>
+
           <!-- iframe for mGBA (inserted dynamically when needed) -->
           <div id="mgba-frame-container" style="display:none;">
             <iframe id="mgba-frame" src="/mgba/player.html" style="width:540px;height:360px;border:0;border-radius:6px;background:#000;"></iframe>
           </div>
+
+          <!-- iframe for GBA.js (inserted dynamically when needed) -->
+          <div id="gbajs-frame-container" style="display:none;">
+            <!-- Prefer same-origin player if you host the archive under /gbajs/ -->
+            <iframe id="gbajs-frame-local" src="/gbajs/player.html" style="width:540px;height:360px;border:0;border-radius:6px;background:#000;"></iframe>
+
+            <!-- Public archived demo (cross-origin). This is optional and will be shown below the local iframe
+                 as a convenience, but note cross-origin demos can't accept transferred ArrayBuffers. -->
+            <div style="margin-top:8px;color:var(--muted);font-size:13px">
+              <div>Public demo (read-only, cross-origin): <a href="http://endrift.github.io/gbajs/" target="_blank" rel="noopener">endrift.github.io/gbajs</a></div>
+              <div style="font-size:12px;color:var(--muted)">For automatic ROM transfer use the same-origin /gbajs/player.html and add the official build files into /gbajs/</div>
+            </div>
+          </div>
+
         </div>
       </section>
 
@@ -66,7 +82,7 @@
         </p>
       </section>
 
-      <!-- New: Game Library -->
+      <!-- Library -->
       <section id="library" aria-labelledby="library-title">
         <div class="library-header">
           <h2 id="library-title">Game Library</h2>
@@ -75,7 +91,6 @@
           </div>
         </div>
 
-        <!-- Empty state (visible when no ROMs) -->
         <div id="library-empty" class="library-empty center">
           <div>
             <p class="muted">No games in your library yet.</p>
@@ -83,24 +98,8 @@
           </div>
         </div>
 
-        <!-- Grid of thumbnails (pure CSS layout) -->
         <div class="rom-grid" aria-live="polite">
-          <!-- Example static entries (you can remove or replace with dynamic entries) -->
-          <figure class="rom-item" data-filename="example1.gba">
-            <div class="thumb">
-              <img src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='480' height='320'><rect width='100%' height='100%' fill='%23000'/><text x='50%' y='50%' fill='%237ee3d8' font-family='Arial' font-size='20' text-anchor='middle' dominant-baseline='middle'>Example ROM</text></svg>" alt="Example ROM thumbnail">
-            </div>
-            <figcaption>
-              <strong class="rom-title">Example ROM</strong>
-              <div class="rom-meta">gba • demo</div>
-            </figcaption>
-            <div class="rom-actions">
-              <button class="rom-play" title="Play">▶</button>
-              <button class="rom-remove" title="Remove">✕</button>
-            </div>
-          </figure>
-
-          <!-- You can add more static placeholders here if desired -->
+          <!-- Items added dynamically -->
         </div>
       </section>
     </main>
@@ -111,7 +110,6 @@
   </div>
 
   <script src="app.js"></script>
-  <!-- Optional helper to add library items programmatically. See library.js comments. -->
   <script src="library.js" defer></script>
 </body>
 </html>
