@@ -1,113 +1,44 @@
-<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Netlify Game Host — Browser Emulator</title>
-  <link rel="stylesheet" href="styles.css" />
-  <!-- jsnes (NES emulator) from CDN -->
-  <script src="https://unpkg.com/jsnes/dist/jsnes.min.js"></script>
-</head>
-<body>
-  <div class="site">
-    <header>
-      <h1>Netlify Game Host — Browser Emulator</h1>
-      <p class="muted">Upload and play ROMs in your browser (client-side only). Use only ROMs you legally own or that are public-domain/homebrew.</p>
-
-      <!-- Navigation -->
-      <nav style="margin-top:20px;">
-        <a href="index.html">Home</a> |
-        <a href="books.html">Books</a> |
-        <a href="learn.html">Learn</a>
-      </nav>
-    </header>
-
-    <main>
-      <section id="controls">
-        <div class="left">
-          <label class="file-label">
-            Choose ROM
-            <input id="rom-file" type="file" accept=".nes,.zip,.bin,.rom,.gba" />
-          </label>
-
-          <label class="file-label" style="display:flex;align-items:center;">
-            Emulator:
-            <select id="emulator-select" style="margin-left:8px;background:transparent;border:0;color:var(--muted)">
-              <option value="nes">NES (jsnes)</option>
-              <option value="mGBA">GBA (mGBA WebAssembly - host yourself)</option>
-              <option value="gbajs">GBA.js (endrift / archived)</option>
-            </select>
-          </label>
-
-          <button id="btn-play" disabled>Load & Play</button>
-          <button id="btn-reset" disabled>Reset</button>
-          <button id="btn-stop" disabled>Stop</button>
-        </div>
-        <div class="right">
-          <div id="status">Idle</div>
-        </div>
-      </section>
-
-      <section id="screen-area">
-        <div id="drop-zone">Drop ROM here</div>
-        <div id="render-area">
-          <canvas id="screen" width="256" height="240"></canvas>
-
-          <div id="mgba-frame-container" style="display:none;">
-            <iframe id="mgba-frame" src="/mgba/player.html" style="width:540px;height:360px;border:0;border-radius:6px;background:#000;"></iframe>
-          </div>
-
-          <div id="gbajs-frame-container" style="display:none;">
-            <iframe id="gbajs-frame-local" src="/gbajs/player.html" style="width:540px;height:360px;border:0;border-radius:6px;background:#000;"></iframe>
-
-            <div style="margin-top:8px;color:var(--muted);font-size:13px">
-              <div>Public demo (read-only, cross-origin): <a href="http://endrift.github.io/gbajs/" target="_blank" rel="noopener">endrift.github.io/gbajs</a></div>
-              <div style="font-size:12px;color:var(--muted)">For automatic ROM transfer use the same-origin /gbajs/player.html and add the official build files into /gbajs/</div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section id="info">
-        <h2>Controls</h2>
-        <p>
-          Keyboard (default):
-          <br>Arrow keys = D-pad
-          <br>Z = A, X = B, Enter = Start, Shift = Select
-        </p>
-
-        <h2>Important</h2>
-        <p class="warning">
-          This site only runs emulators in your browser and loads ROM files from your computer (or that you choose to drop). Do NOT upload or share copyrighted ROMs you do not own. Use only ROMs you legally own or public-domain/homebrew ROMs.
-        </p>
-      </section>
-
-      <section id="library" aria-labelledby="library-title">
-        <div class="library-header">
-          <h2 id="library-title">Game Library</h2>
-          <div class="controls-hint">
-            <span class="muted">Your uploaded ROMs will appear here. Click a thumbnail to load/play.</span>
-          </div>
-        </div>
-
-        <div id="library-empty" class="library-empty center">
-          <div>
-            <p class="muted">No games in your library yet.</p>
-            <p class="muted">Load a ROM or drag-and-drop one to add it here.</p>
-          </div>
-        </div>
-
-        <div class="rom-grid" aria-live="polite">
-        </div>
-      </section>
-    </main>
-
-    <footer>
-      <small>Designed for deployment to Netlify as a static site. No server-side storage, ROM files stay in your browser memory only.</small>
-    </footer>
+<header style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;">
+  <div>
+    <h1>Netlify Game Host — Browser Emulator</h1>
+    <p class="muted">
+      Upload and play ROMs in your browser (client-side only). Use only ROMs you legally own or that are public-domain/homebrew.
+    </p>
   </div>
 
-  <script src="app.js"></script>
-  <script src="library.js" defer></script>
-</body>
-</html>
+  <nav style="display:flex;gap:15px;margin-top:10px;">
+    <a href="books.html"
+       style="
+         background:#28a745;
+         color:white;
+         padding:14px 28px;
+         border-radius:10px;
+         text-decoration:none;
+         font-size:20px;
+         font-weight:bold;
+         box-shadow:0 4px 8px rgba(0,0,0,.3);
+         transition:.2s;
+       "
+       onmouseover="this.style.background='#218838'"
+       onmouseout="this.style.background='#28a745'">
+      📚 Books
+    </a>
+
+    <a href="learn.html"
+       style="
+         background:#28a745;
+         color:white;
+         padding:14px 28px;
+         border-radius:10px;
+         text-decoration:none;
+         font-size:20px;
+         font-weight:bold;
+         box-shadow:0 4px 8px rgba(0,0,0,.3);
+         transition:.2s;
+       "
+       onmouseover="this.style.background='#218838'"
+       onmouseout="this.style.background='#28a745'">
+      🎓 Learn
+    </a>
+  </nav>
+</header>
