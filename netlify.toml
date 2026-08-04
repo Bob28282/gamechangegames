@@ -1,4 +1,6 @@
 [build]
   publish = "/"
   command = ""
-NPM_FLAGS=--ignore-scripts
+
+[build.environment]
+  NPM_FLAGS = "--ignore-scripts"
