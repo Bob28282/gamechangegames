@@ -1,3 +1,4 @@
 [build]
   publish = "/"
   command = ""
+NPM_FLAGS=--ignore-scripts
