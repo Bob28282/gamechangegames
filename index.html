@@ -13,6 +13,13 @@
     <header>
       <h1>Netlify Game Host — Browser Emulator</h1>
       <p class="muted">Upload and play ROMs in your browser (client-side only). Use only ROMs you legally own or that are public-domain/homebrew.</p>
+
+      <!-- Navigation -->
+      <nav style="margin-top:20px;">
+        <a href="index.html">Home</a> |
+        <a href="books.html">Books</a> |
+        <a href="learn.html">Learn</a>
+      </nav>
     </header>
 
     <main>
@@ -44,27 +51,20 @@
       <section id="screen-area">
         <div id="drop-zone">Drop ROM here</div>
         <div id="render-area">
-          <!-- Canvas for NES -->
           <canvas id="screen" width="256" height="240"></canvas>
 
-          <!-- iframe for mGBA (inserted dynamically when needed) -->
           <div id="mgba-frame-container" style="display:none;">
             <iframe id="mgba-frame" src="/mgba/player.html" style="width:540px;height:360px;border:0;border-radius:6px;background:#000;"></iframe>
           </div>
 
-          <!-- iframe for GBA.js (inserted dynamically when needed) -->
           <div id="gbajs-frame-container" style="display:none;">
-            <!-- Prefer same-origin player if you host the archive under /gbajs/ -->
             <iframe id="gbajs-frame-local" src="/gbajs/player.html" style="width:540px;height:360px;border:0;border-radius:6px;background:#000;"></iframe>
 
-            <!-- Public archived demo (cross-origin). This is optional and will be shown below the local iframe
-                 as a convenience, but note cross-origin demos can't accept transferred ArrayBuffers. -->
             <div style="margin-top:8px;color:var(--muted);font-size:13px">
               <div>Public demo (read-only, cross-origin): <a href="http://endrift.github.io/gbajs/" target="_blank" rel="noopener">endrift.github.io/gbajs</a></div>
               <div style="font-size:12px;color:var(--muted)">For automatic ROM transfer use the same-origin /gbajs/player.html and add the official build files into /gbajs/</div>
             </div>
           </div>
-
         </div>
       </section>
 
@@ -72,8 +72,8 @@
         <h2>Controls</h2>
         <p>
           Keyboard (default):
-          <br/>Arrow keys = D-pad
-          <br/>Z = A, X = B, Enter = Start, Shift = Select
+          <br>Arrow keys = D-pad
+          <br>Z = A, X = B, Enter = Start, Shift = Select
         </p>
 
         <h2>Important</h2>
@@ -82,7 +82,6 @@
         </p>
       </section>
 
-      <!-- Library -->
       <section id="library" aria-labelledby="library-title">
         <div class="library-header">
           <h2 id="library-title">Game Library</h2>
@@ -99,7 +98,6 @@
         </div>
 
         <div class="rom-grid" aria-live="polite">
-          <!-- Items added dynamically -->
         </div>
       </section>
     </main>
