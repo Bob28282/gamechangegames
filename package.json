@@ -1,3 +1,4 @@
+{"overrides": {"@thenick775/mgba-wasm": {"scripts": {"prepare": "echo skipped"}}}}
 {
   "name": "@thenick775/mgba-wasm",
   "version": "2.3.4",
