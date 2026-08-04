@@ -21,15 +21,6 @@
     "type": "git",
     "url": "git+https://github.com/thenick775/mgba.git"
   },
-  {
-  "overrides": {
-    "@thenick775/mgba-wasm": {
-      "scripts": {
-        "prepare": "echo skipped"
-      }
-    }
-  }
-}
   "keywords": [
     "mGBA",
     "wasm",
