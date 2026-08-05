@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Web Search</title>
+
+<style>
+body{
+    font-family:Arial,sans-serif;
+    background:#111;
+    color:white;
+    max-width:900px;
+    margin:auto;
+    padding:40px;
+}
+
+input{
+    width:75%;
+    padding:12px;
+    font-size:18px;
+}
+
+button{
+    padding:12px 24px;
+    background:#28a745;
+    color:white;
+    border:none;
+    cursor:pointer;
+    font-size:18px;
+}
+
+.result{
+    margin:20px 0;
+    padding:15px;
+    background:#222;
+    border-radius:8px;
+}
+
+.result a{
+    color:#4da3ff;
+    text-decoration:none;
+}
+</style>
+
+</head>
+<body>
+
+<h1>Search the Web</h1>
+
+<input id="query" placeholder="Search...">
+<button onclick="search()">Search</button>
+
+<div id="results"></div>
+
+<script>
+async function search(){
+
+    const q=document.getElementById("query").value;
+
+    const res=await fetch("/.netlify/functions/search?q="+encodeURIComponent(q));
+
+    const data=await res.json();
+
+    const results=document.getElementById("results");
+    results.innerHTML="";
+
+    data.results.forEach(item=>{
+
+        results.innerHTML+=`
+        <div class="result">
+            <h3><a href="${item.url}" target="_blank">${item.title}</a></h3>
+            <p>${item.description}</p>
+        </div>
+        `;
+
+    });
+
+}
+</script>
+
+</body>
+</html>
