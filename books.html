@@ -18733,13 +18733,10 @@ And, of course, her goat…
         5: 'testf'
     };
 
-    function showNotes(number) {
-        const textarea = document.getElementById("book-notes");
-
-        // Save the current textarea contents
-        if (textarea.dataset.current) {
-            notes[textarea.dataset.current] = textarea.value;
-        }
+  function showNotes(number) {
+  const textarea = document.getElementById("book-notes");
+  textarea.value = notes[number];
+}
 
         // Switch to the selected textarea
         textarea.value = notes[number];
@@ -18747,7 +18744,7 @@ And, of course, her goat…
     }
 
     // Set the initial textarea
-    document.getElementById("book-notes").dataset.current = "1";
+   showNotes(1);
 </script>
 
 </main>
