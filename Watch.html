@@ -131,12 +131,7 @@
 
     <div class="video-wrapper" id="videoWrapper">
 
-      <video id="movie" preload="metadata">
-        <source
-          src="https://res.cloudinary.com/rlcijsr6/video/upload/v1788706705/2020dabei_fyzezv.ogv"
-          type="video/mp4"
-        >
-      </video>
+      <video id="movie" preload="metadata"> </video>
 
       <div class="controls">
 
@@ -180,8 +175,15 @@
     </div>
   </main>
 
+  <script src="https://cdn.dashjs.org/latest/dash.all.min.js"></script>
+  
   <script>
     const video = document.getElementById("movie");
+    const player = dashjs.MediaPlayer().create();player.initialize(
+  video,
+  videos[1],
+  false
+);
     const playBtn = document.getElementById("playBtn");
     const progress = document.getElementById("progress");
     const volume = document.getElementById("volume");
@@ -202,15 +204,11 @@
      */
 
     const videos = {
-      1: "https://res.cloudinary.com/rlcijsr6/video/upload/v1788706705/2020dabei_fyzezv.ogv",
-
-      2: "https://res.cloudinary.com/rlcijsr6/video/upload/v1788706705/2020dabei_fyzezv.ogv",
-
-      3: "https://example.com/video3.mp4",
-
-      4: "https://example.com/video4.mp4",
-
-      5: "https://example.com/video5.mp4"
+       1: "https://res.cloudinary.com/rlcijsr6/video/upload/v1788706705/2020dabei_fyzezv.ogv",
+  2: "https://example.com/dash/video2/manifest.mpd",
+  3: "https://example.com/dash/video3/manifest.mpd",
+  4: "https://example.com/dash/video4/manifest.mpd",
+  5: "https://example.com/dash/video5/manifest.mpd"
     };
 
 
@@ -233,10 +231,9 @@
       video.pause();
 
       // Change source
-      video.src = newVideo;
+   player.attachSource(newVideo);
 
       // Start from beginning
-      video.currentTime = 0;
 
       // Reset progress and time
       progress.value = 0;
@@ -252,7 +249,6 @@
         .classList.add("active");
 
       // Load the new video
-      video.load();
 
       // Keep current volume
       video.volume = Number(volume.value);
