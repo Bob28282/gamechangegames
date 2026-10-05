@@ -9,7 +9,435 @@
 <body>
 
 <div class="site">
+<!-- dogwifhat (WIF) Tracker -->
+<section id="wif-tracker" class="wif-tracker">
+  <div class="wif-header">
+    <div>
+      <div class="wif-label">CRYPTO TRACKER</div>
+      <h2>dogwifhat <span>(WIF)</span></h2>
+    </div>
+    <div id="wif-status" class="wif-status">
+      <span class="status-dot"></span> Live
+    </div>
+  </div>
 
+  <div class="wif-price-row">
+    <div>
+      <div class="wif-price" id="wif-price">Loading...</div>
+      <div id="wif-change" class="wif-change">--</div>
+    </div>
+
+    <div class="wif-logo">WIF</div>
+  </div>
+
+  <div class="wif-chart-wrap">
+    <canvas id="wif-chart"></canvas>
+  </div>
+
+  <div class="wif-stats">
+    <div class="wif-stat">
+      <span>Market Cap</span>
+      <strong id="wif-market-cap">--</strong>
+    </div>
+
+    <div class="wif-stat">
+      <span>24h Volume</span>
+      <strong id="wif-volume">--</strong>
+    </div>
+
+    <div class="wif-stat">
+      <span>24h High</span>
+      <strong id="wif-high">--</strong>
+    </div>
+
+    <div class="wif-stat">
+      <span>24h Low</span>
+      <strong id="wif-low">--</strong>
+    </div>
+  </div>
+
+  <div class="wif-footer">
+    <span>Updated <strong id="wif-updated">--</strong></span>
+    <button id="wif-refresh" type="button">Refresh</button>
+  </div>
+</section>
+
+<style>
+  .wif-tracker {
+    width: min(100%, 720px);
+    margin: 30px auto;
+    padding: 26px;
+    border-radius: 24px;
+    background: #111318;
+    color: #fff;
+    font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+      sans-serif;
+    box-sizing: border-box;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
+  }
+
+  .wif-header,
+  .wif-price-row,
+  .wif-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+  }
+
+  .wif-label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    opacity: 0.5;
+    margin-bottom: 6px;
+  }
+
+  .wif-header h2 {
+    margin: 0;
+    font-size: 28px;
+    line-height: 1.1;
+  }
+
+  .wif-header h2 span {
+    opacity: 0.45;
+    font-weight: 500;
+  }
+
+  .wif-status {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 13px;
+    opacity: 0.75;
+  }
+
+  .status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #42d392;
+    box-shadow: 0 0 10px rgba(66, 211, 146, 0.8);
+  }
+
+  .wif-price-row {
+    margin-top: 32px;
+  }
+
+  .wif-price {
+    font-size: clamp(36px, 8vw, 58px);
+    font-weight: 800;
+    letter-spacing: -0.04em;
+  }
+
+  .wif-change {
+    margin-top: 5px;
+    font-size: 16px;
+    font-weight: 700;
+  }
+
+  .wif-change.positive {
+    color: #42d392;
+  }
+
+  .wif-change.negative {
+    color: #ff647c;
+  }
+
+  .wif-logo {
+    width: 62px;
+    height: 62px;
+    display: grid;
+    place-items: center;
+    border-radius: 18px;
+    background: linear-gradient(135deg, #f5d76e, #d69d2b);
+    color: #111;
+    font-size: 15px;
+    font-weight: 900;
+    transform: rotate(-5deg);
+  }
+
+  .wif-chart-wrap {
+    height: 230px;
+    margin: 28px 0;
+    position: relative;
+  }
+
+  #wif-chart {
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+
+  .wif-stats {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+
+  .wif-stat {
+    padding: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.035);
+  }
+
+  .wif-stat span {
+    display: block;
+    margin-bottom: 7px;
+    font-size: 12px;
+    opacity: 0.5;
+  }
+
+  .wif-stat strong {
+    font-size: 17px;
+  }
+
+  .wif-footer {
+    margin-top: 20px;
+    font-size: 12px;
+    opacity: 0.5;
+  }
+
+  #wif-refresh {
+    border: 0;
+    border-radius: 9px;
+    padding: 8px 13px;
+    background: rgba(255, 255, 255, 0.08);
+    color: white;
+    cursor: pointer;
+    font-weight: 600;
+  }
+
+  #wif-refresh:hover {
+    background: rgba(255, 255, 255, 0.14);
+  }
+
+  @media (max-width: 500px) {
+    .wif-tracker {
+      padding: 20px;
+      border-radius: 18px;
+    }
+
+    .wif-header h2 {
+      font-size: 23px;
+    }
+
+    .wif-chart-wrap {
+      height: 190px;
+    }
+  }
+</style>
+
+<script>
+  (() => {
+    const API_BASE = "https://api.coingecko.com/api/v3";
+    const COIN_ID = "dogwifhat";
+
+    const priceEl = document.getElementById("wif-price");
+    const changeEl = document.getElementById("wif-change");
+    const marketCapEl = document.getElementById("wif-market-cap");
+    const volumeEl = document.getElementById("wif-volume");
+    const highEl = document.getElementById("wif-high");
+    const lowEl = document.getElementById("wif-low");
+    const updatedEl = document.getElementById("wif-updated");
+    const statusEl = document.getElementById("wif-status");
+    const refreshBtn = document.getElementById("wif-refresh");
+    const canvas = document.getElementById("wif-chart");
+
+    const ctx = canvas.getContext("2d");
+
+    function money(value) {
+      if (value == null) return "--";
+
+      return new Intl.NumberFormat("en-US", {
+        style: "currency",
+        currency: "USD",
+        maximumFractionDigits: value < 1 ? 6 : 2
+      }).format(value);
+    }
+
+    function compactMoney(value) {
+      if (value == null) return "--";
+
+      return new Intl.NumberFormat("en-US", {
+        style: "currency",
+        currency: "USD",
+        notation: "compact",
+        maximumFractionDigits: 2
+      }).format(value);
+    }
+
+    function resizeCanvas() {
+      const rect = canvas.getBoundingClientRect();
+      const dpr = window.devicePixelRatio || 1;
+
+      canvas.width = rect.width * dpr;
+      canvas.height = rect.height * dpr;
+
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+
+    function drawChart(prices) {
+      resizeCanvas();
+
+      const width = canvas.clientWidth;
+      const height = canvas.clientHeight;
+
+      ctx.clearRect(0, 0, width, height);
+
+      if (!prices || prices.length < 2) return;
+
+      const values = prices.map(point => point[1]);
+
+      const min = Math.min(...values);
+      const max = Math.max(...values);
+      const range = max - min || 1;
+
+      const padding = 8;
+
+      const points = values.map((value, index) => {
+        const x = padding +
+          (index / (values.length - 1)) *
+          (width - padding * 2);
+
+        const y = height - padding -
+          ((value - min) / range) *
+          (height - padding * 2);
+
+        return { x, y };
+      });
+
+      // Filled area
+      const gradient = ctx.createLinearGradient(0, 0, 0, height);
+      gradient.addColorStop(0, "rgba(66, 211, 146, 0.22)");
+      gradient.addColorStop(1, "rgba(66, 211, 146, 0)");
+
+      ctx.beginPath();
+      ctx.moveTo(points[0].x, height);
+
+      points.forEach(point => {
+        ctx.lineTo(point.x, point.y);
+      });
+
+      ctx.lineTo(points[points.length - 1].x, height);
+      ctx.closePath();
+
+      ctx.fillStyle = gradient;
+      ctx.fill();
+
+      // Price line
+      ctx.beginPath();
+
+      points.forEach((point, index) => {
+        if (index === 0) {
+          ctx.moveTo(point.x, point.y);
+        } else {
+          ctx.lineTo(point.x, point.y);
+        }
+      });
+
+      ctx.strokeStyle = "#42d392";
+      ctx.lineWidth = 2.5;
+      ctx.lineJoin = "round";
+      ctx.lineCap = "round";
+      ctx.stroke();
+
+      // Last-price dot
+      const last = points[points.length - 1];
+
+      ctx.beginPath();
+      ctx.arc(last.x, last.y, 4, 0, Math.PI * 2);
+      ctx.fillStyle = "#42d392";
+      ctx.fill();
+    }
+
+    async function loadWIF() {
+      try {
+        statusEl.innerHTML =
+          '<span class="status-dot"></span> Updating...';
+
+        const [priceResponse, chartResponse] = await Promise.all([
+          fetch(
+            `${API_BASE}/simple/price?ids=${COIN_ID}` +
+            `&vs_currencies=usd` +
+            `&include_market_cap=true` +
+            `&include_24hr_vol=true` +
+            `&include_24hr_change=true` +
+            `&include_24hr_high=true` +
+            `&include_24hr_low=true`
+          ),
+
+          fetch(
+            `${API_BASE}/coins/${COIN_ID}/market_chart` +
+            `?vs_currency=usd&days=1&interval=hourly`
+          )
+        ]);
+
+        if (!priceResponse.ok || !chartResponse.ok) {
+          throw new Error("API request failed");
+        }
+
+        const priceData = await priceResponse.json();
+        const chartData = await chartResponse.json();
+
+        const wif = priceData[COIN_ID];
+
+        if (!wif) {
+          throw new Error("WIF data unavailable");
+        }
+
+        const change = wif.usd_24h_change || 0;
+
+        priceEl.textContent = money(wif.usd);
+
+        changeEl.textContent =
+          `${change >= 0 ? "+" : ""}${change.toFixed(2)}% (24h)`;
+
+        changeEl.className =
+          `wif-change ${change >= 0 ? "positive" : "negative"}`;
+
+        marketCapEl.textContent = compactMoney(wif.usd_market_cap);
+        volumeEl.textContent = compactMoney(wif.usd_24h_vol);
+        highEl.textContent = money(wif.usd_24h_high);
+        lowEl.textContent = money(wif.usd_24h_low);
+
+        updatedEl.textContent =
+          new Date().toLocaleTimeString([], {
+            hour: "2-digit",
+            minute: "2-digit",
+            second: "2-digit"
+          });
+
+        drawChart(chartData.prices);
+
+        statusEl.innerHTML =
+          '<span class="status-dot"></span> Live';
+
+      } catch (error) {
+        console.error("WIF tracker error:", error);
+
+        statusEl.innerHTML =
+          '<span class="status-dot"></span> Offline';
+
+        priceEl.textContent = "Unavailable";
+      }
+    }
+
+    refreshBtn.addEventListener("click", loadWIF);
+
+    window.addEventListener("resize", () => {
+      // Redraw using the latest data when the browser is resized.
+      loadWIF();
+    });
+
+    // Initial load
+    loadWIF();
+
+    // Refresh every 60 seconds
+    setInterval(loadWIF, 60000);
+  })();
+</script>
 <header>
     <h1>Learn</h1>
 
