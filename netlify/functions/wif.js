@@ -1,7 +1,7 @@
 exports.handler = async function () {
   try {
     const response = await fetch(
-      "https://api.coingecko.com/api/v3/coins/dogwifhat?localization=false&tickers=false&market_data=true&community_data=false&developer_data=false"
+      "https://api.coingecko.com/api/v3/coins/dogwifcoin?localization=false&tickers=false&market_data=true&community_data=false&developer_data=false"
     );
 
     const data = await response.json();
@@ -30,7 +30,6 @@ exports.handler = async function () {
       body: JSON.stringify({
         name: data.name,
         symbol: data.symbol,
-        image: data.image?.small,
 
         price: market.current_price.usd,
         change24h: market.price_change_percentage_24h,
@@ -46,6 +45,7 @@ exports.handler = async function () {
         updated: data.last_updated
       })
     };
+
   } catch (error) {
     return {
       statusCode: 500,
