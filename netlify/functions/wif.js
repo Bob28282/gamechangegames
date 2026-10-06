@@ -26,7 +26,7 @@ exports.handler = async function () {
       statusCode: 200,
       headers: {
         "Content-Type": "application/json",
-        "Cache-Control": "public, max-age=30"
+        "Cache-Control": "no-store"
       },
       body: JSON.stringify({
         name: data.name,
@@ -51,7 +51,8 @@ exports.handler = async function () {
     return {
       statusCode: 500,
       headers: {
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store"
       },
       body: JSON.stringify({
         error: "Unable to retrieve WIF data",
