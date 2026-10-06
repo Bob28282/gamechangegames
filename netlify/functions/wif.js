@@ -10,7 +10,8 @@ exports.handler = async function () {
       return {
         statusCode: response.status,
         headers: {
-          "Content-Type": "application/json"
+          "Content-Type": "application/json",
+          "Cache-Control": "no-store"
         },
         body: JSON.stringify({
           error: "CoinGecko API error",
