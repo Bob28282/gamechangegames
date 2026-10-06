@@ -9,6 +9,57 @@
 <body>
 
 <div class="site">
+  ```html
+<!-- Bitcoin Tracker -->
+<section class="wif-tracker btc-tracker">
+  <div class="wif-header">
+    <div>
+      <div class="wif-label">CRYPTO TRACKER</div>
+      <h2>Bitcoin <span>(BTC)</span></h2>
+    </div>
+
+    <div id="btc-status" class="wif-status">
+      <span class="status-dot"></span> Live
+    </div>
+  </div>
+
+  <div class="wif-price-row">
+    <div>
+      <div class="wif-price" id="btc-price">Loading...</div>
+      <div id="btc-change" class="wif-change">--</div>
+    </div>
+
+    <div class="wif-logo btc-logo">₿</div>
+  </div>
+
+  <div class="wif-stats">
+    <div class="wif-stat">
+      <span>Market Cap</span>
+      <strong id="btc-market-cap">--</strong>
+    </div>
+
+    <div class="wif-stat">
+      <span>24h Volume</span>
+      <strong id="btc-volume">--</strong>
+    </div>
+
+    <div class="wif-stat">
+      <span>24h High</span>
+      <strong id="btc-high">--</strong>
+    </div>
+
+    <div class="wif-stat">
+      <span>24h Low</span>
+      <strong id="btc-low">--</strong>
+    </div>
+  </div>
+
+  <div class="wif-footer">
+    <span>Updated <strong id="btc-updated">--</strong></span>
+  </div>
+</section>
+```
+
 <!-- dogwifhat (WIF) Tracker -->
 <section id="wif-tracker" class="wif-tracker">
   <div class="wif-header">
@@ -229,6 +280,7 @@
   }
 </style>
 
+```html
 <script>
 (() => {
   const priceEl = document.getElementById("wif-price");
@@ -242,6 +294,15 @@
   const refreshBtn = document.getElementById("wif-refresh");
   const canvas = document.getElementById("wif-chart");
 
+  const btcPriceEl = document.getElementById("btc-price");
+  const btcChangeEl = document.getElementById("btc-change");
+  const btcMarketCapEl = document.getElementById("btc-market-cap");
+  const btcVolumeEl = document.getElementById("btc-volume");
+  const btcHighEl = document.getElementById("btc-high");
+  const btcLowEl = document.getElementById("btc-low");
+  const btcUpdatedEl = document.getElementById("btc-updated");
+  const btcStatusEl = document.getElementById("btc-status");
+
   const ctx = canvas.getContext("2d");
 
   function money(value) {
@@ -254,6 +315,16 @@
     }).format(value);
   }
 
+  function bitcoinMoney(value) {
+    if (value === null || value === undefined) return "--";
+
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "USD",
+      maximumFractionDigits: 0
+    }).format(value);
+  }
+
   function compactMoney(value) {
     if (value === null || value === undefined) return "--";
 
@@ -263,6 +334,17 @@
       notation: "compact",
       maximumFractionDigits: 2
     }).format(value);
+  }
+
+  function updateChange(element, change) {
+    change = Number(change || 0);
+
+    element.textContent =
+      `${change >= 0 ? "+" : ""}${change.toFixed(2)}% (24h)`;
+
+    element.className =
+      "wif-change " +
+      (change >= 0 ? "positive" : "negative");
   }
 
   function resizeCanvas() {
@@ -288,7 +370,6 @@
     const min = Math.min(...prices);
     const max = Math.max(...prices);
     const range = max - min || 1;
-
     const padding = 8;
 
     ctx.beginPath();
@@ -297,13 +378,13 @@
       const x =
         padding +
         (index / (prices.length - 1)) *
-          (width - padding * 2);
+        (width - padding * 2);
 
       const y =
         height -
         padding -
         ((price - min) / range) *
-          (height - padding * 2);
+        (height - padding * 2);
 
       if (index === 0) {
         ctx.moveTo(x, y);
@@ -325,7 +406,7 @@
       height -
       padding -
       ((lastPrice - min) / range) *
-        (height - padding * 2);
+      (height - padding * 2);
 
     ctx.beginPath();
     ctx.arc(lastX, lastY, 4, 0, Math.PI * 2);
@@ -333,14 +414,18 @@
     ctx.fill();
   }
 
-  async function loadWIF() {
+  async function loadCrypto() {
     try {
       statusEl.innerHTML =
         '<span class="status-dot"></span> Updating...';
 
-      const response = await fetch("/.netlify/functions/wif", {
-        cache: "no-store"
-      });
+      btcStatusEl.innerHTML =
+        '<span class="status-dot"></span> Updating...';
+
+      const response = await fetch(
+        "/.netlify/functions/wif",
+        { cache: "no-store" }
+      );
 
       const data = await response.json();
 
@@ -350,28 +435,26 @@
         );
       }
 
-      priceEl.textContent = money(data.price);
+      /* WIF */
 
-      const change = Number(data.change24h || 0);
+      priceEl.textContent = money(data.wif.price);
 
-      changeEl.textContent =
-        `${change >= 0 ? "+" : ""}${change.toFixed(2)}% (24h)`;
-
-      changeEl.className =
-        "wif-change " +
-        (change >= 0 ? "positive" : "negative");
+      updateChange(
+        changeEl,
+        data.wif.change24h
+      );
 
       marketCapEl.textContent =
-        compactMoney(data.marketCap);
+        compactMoney(data.wif.marketCap);
 
       volumeEl.textContent =
-        compactMoney(data.volume24h);
+        compactMoney(data.wif.volume24h);
 
       highEl.textContent =
-        money(data.high24h);
+        money(data.wif.high24h);
 
       lowEl.textContent =
-        money(data.low24h);
+        money(data.wif.low24h);
 
       updatedEl.textContent =
         new Date().toLocaleTimeString([], {
@@ -380,40 +463,78 @@
           second: "2-digit"
         });
 
-      drawChart(data.chart);
+      drawChart(data.wif.chart);
 
       statusEl.innerHTML =
         '<span class="status-dot"></span> Live';
 
+
+      /* BITCOIN */
+
+      btcPriceEl.textContent =
+        bitcoinMoney(data.bitcoin.price);
+
+      updateChange(
+        btcChangeEl,
+        data.bitcoin.change24h
+      );
+
+      btcMarketCapEl.textContent =
+        compactMoney(data.bitcoin.marketCap);
+
+      btcVolumeEl.textContent =
+        compactMoney(data.bitcoin.volume24h);
+
+      btcHighEl.textContent =
+        bitcoinMoney(data.bitcoin.high24h);
+
+      btcLowEl.textContent =
+        bitcoinMoney(data.bitcoin.low24h);
+
+      btcUpdatedEl.textContent =
+        new Date().toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+          second: "2-digit"
+        });
+
+      btcStatusEl.innerHTML =
+        '<span class="status-dot"></span> Live';
+
     } catch (error) {
-      console.error("WIF tracker:", error);
+      console.error("Crypto tracker:", error);
 
       statusEl.innerHTML =
         '<span class="status-dot"></span> Error';
 
+      btcStatusEl.innerHTML =
+        '<span class="status-dot"></span> Error';
+
       priceEl.textContent = "Unavailable";
+      btcPriceEl.textContent = "Unavailable";
 
       changeEl.textContent =
         "Could not load market data";
 
-      console.error(
-        "Tracker error:",
-        error.message
-      );
+      btcChangeEl.textContent =
+        "Could not load market data";
     }
   }
 
-  refreshBtn.addEventListener("click", loadWIF);
+  refreshBtn.addEventListener("click", loadCrypto);
 
-  loadWIF();
+  loadCrypto();
 
-  setInterval(loadWIF, 30000);
+  /* Refresh every 10 seconds */
+  setInterval(loadCrypto, 10000);
 
   window.addEventListener("resize", () => {
-    loadWIF();
+    loadCrypto();
   });
 })();
 </script>
+```
+
 <header>
     <h1>Learn</h1>
 
