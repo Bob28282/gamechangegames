@@ -1,5 +1,5 @@
 const Options = {
-    wasm: "wasm/oregon78.wasm",
+    wasm: "https://raw.githubusercontent.com/attilabuti/Oregon-Trail-Browser/main/wasm/oregon78.wasm",
     bell: "audio/bell.mp3",
     fontSize: {
         default: 18,
